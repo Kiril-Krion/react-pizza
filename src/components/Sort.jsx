@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { useSelector, useDispatch } from "react-redux";
-import { setSort } from "../Redux/slices/filterSlice";
+import React, { useRef, useState, useEffect } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
+import { setSort } from '../Redux/slices/filterSlice';
 
 export const sortList = [
   { name: 'популярности (DESC)', sortProperty: 'rating' },
@@ -11,10 +11,10 @@ export const sortList = [
   { name: 'алфавиту (ASC)', sortProperty: '-title' },
 ];
 
-
 function Sort() {
   const dispatch = useDispatch();
-  const sort = useSelector(state => state.filter.sort);
+  const sort = useSelector((state) => state.filter.sort);
+  const softRef = useRef();
 
   const [isVisible, setIsVisible] = useState(false);
 
@@ -33,8 +33,21 @@ function Sort() {
     setIsVisible(false);
   };
 
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (!e.path.includes(softRef.current)) {
+        setIsVisible(false);
+      }
+    };
+    document.body.addEventListener('click', handleClickOutside);
+
+    return () => {
+      document.body.removeEventListener('click', handleClickOutside);
+    }
+  }, []);
+
   return (
-    <div className="sort">
+    <div ref={softRef} className="sort">
       <div className="sort__label">
         <svg
           className={isVisible ? 'rotated' : ''}
