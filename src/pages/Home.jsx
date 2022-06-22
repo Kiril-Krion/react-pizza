@@ -1,10 +1,10 @@
 import React, { useEffect, useState, useContext, useRef } from 'react';
-import axios from 'axios';
 import qs from 'qs';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 
 import { setCategoryId, setCurrentPage, setFilters } from '../Redux/slices/filterSlice';
+import { fetchPizzas } from '../Redux/slices/pizzasSlice';
 import { SearchContext } from '../App';
 import Categories from '../components/Categories';
 import Pagination from '../components/Pagination';
@@ -21,11 +21,10 @@ function Home() {
   const categoryId = useSelector((state) => state.filter.categoryId);
   const sortType = useSelector((state) => state.filter.sort.sortProperty);
   const currentPage = useSelector((state) => state.filter.currentPage);
+  // const items = useSelector((state) => state.pizza.items);
+  const { items, status } = useSelector((state) => state.pizza);
 
   const { searchValue } = useContext(SearchContext);
-
-  const [items, setItems] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
   // const [categoryId, setCategoryId] = useState(0);
 
   const onChangeCategory = (id) => {
@@ -36,22 +35,41 @@ function Home() {
     dispatch(setCurrentPage(number));
   };
 
-  const fetchPizzas = () => {
-    setIsLoading(true);
-
+  const getPizzas = async () => {
     const sortBy = sortType.replace('-', '');
     const order = sortType.includes('-') ? 'asc' : 'desc';
     const category = categoryId > 0 ? `category=${categoryId}` : '';
     const search = searchValue ? `&search=${searchValue}` : '';
 
-    axios
-      .get(
-        `https://6291edfbcd0c91932b6a6ef4.mockapi.io/items?page=${currentPage}&limit=4&${category}&sortBy=${sortBy}&order=${order}${search}`,
-      )
-      .then((res) => {
-        setItems(res.data);
-        setIsLoading(false);
-      });
+    // await axios
+    //   .get(
+    //     `https://6291edfbcd0c91932b6a6ef4.mockapi.io/items?page=${currentPage}&limit=4&${category}&sortBy=${sortBy}&order=${order}${search}`,
+    //   )
+    //   .then((res) => {
+    //     setItems(res.data);
+    //     setIsLoading(false);
+    //   });
+
+    // const { data } = await axios
+    //   .get(
+    //     `https://6291edfbcd0c91932b6a6ef4.mockapi.io/items?page=${currentPage}&limit=4&${category}&sortBy=${sortBy}&order=${order}${search}`,
+    //   )
+    //   .catch((err) => {
+    //     alert(err.message);
+    //     setIsLoading(false);
+    //   });
+
+    dispatch(
+      fetchPizzas({
+        sortBy,
+        order,
+        category,
+        search,
+        currentPage,
+      }),
+    );
+
+    window.scrollTo(0, 0);
   };
 
   useEffect(() => {
@@ -70,24 +88,21 @@ function Home() {
   }, []);
 
   useEffect(() => {
-    window.scrollTo(0, 0);
-
-    if(!isSearch.current) {
-      fetchPizzas();
+    if (!isSearch.current) {
+      getPizzas();
     }
 
     isSearch.current = false;
-
   }, [categoryId, sortType, searchValue, currentPage]);
 
   useEffect(() => {
-    if(isMounted.current) {
+    if (isMounted.current) {
       const queryString = qs.stringify({
         sortProperty: sortType,
         categoryId,
         currentPage,
       });
-  
+
       navigate(`?${queryString}`);
     }
     isMounted.current = true;
@@ -111,7 +126,17 @@ function Home() {
         <Sort />
       </div>
       <h2 className="content__title">Все пиццы</h2>
-      <div className="content__items">{isLoading ? skeletons : pizzas}</div>
+      {status === 'error' ? (
+        <div className="content__error-info">
+          <h2>Произошла ошибка 😕</h2>
+          <p>
+            К сожалению, не удалось получить питсы. Попробуйте повторить позже.
+          </p>
+        </div>
+      ) : (
+        <div className="content__items">{status === 'loading' ? skeletons : pizzas}</div>
+      )}
+
       <Pagination currentPage={currentPage} onChangePage={onChangePage} />
     </div>
   );
